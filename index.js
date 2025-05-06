@@ -1,6 +1,6 @@
 // === Constants ===
 const BASE = "https://fsa-crud-2aa9294fe819.herokuapp.com/api";
-const COHORT = ""; // Make sure to change this!
+const COHORT = "/2504-MATTHEW"; // Make sure to change this!
 const API = BASE + COHORT;
 
 // === State ===
@@ -8,6 +8,12 @@ let parties = [];
 let selectedParty;
 let rsvps = [];
 let guests = [];
+const formState = {
+  name: "",
+  description: "",
+  date: "",
+  location: "",
+};
 
 /** Updates state with all parties from the API */
 async function getParties() {
@@ -57,6 +63,28 @@ async function getGuests() {
   }
 }
 
+// Adds a new party
+async function addParty(party) {
+  try {
+    const response = await fetch(API + "/events", {
+      method: "POST",
+      body: JSON.stringify(party),
+      headers: { "Content-type": "application/json; charset=UTF-8" },
+    });
+    await getParties();
+    render();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function removeParty(id) {
+  try {
+    const response = await fetch(`${API}/events/${id}`, { method: "DELETE" });
+    selectedParty = null;
+    await getParties();
+  } catch (error) {}
+}
 // === Components ===
 
 /** Party name that shows more details about the party when clicked */
@@ -102,8 +130,11 @@ function SelectedParty() {
     <address>${selectedParty.location}</address>
     <p>${selectedParty.description}</p>
     <GuestList></GuestList>
+    <button>Remove Party</button>
   `;
   $party.querySelector("GuestList").replaceWith(GuestList());
+  const $button = $party.querySelector("button");
+  $button.addEventListener("click", () => removeParty(selectedParty.id));
 
   return $party;
 }
@@ -128,6 +159,57 @@ function GuestList() {
   return $ul;
 }
 
+function NewPartyForm() {
+  const $form = document.createElement("form");
+  $form.innerHTML = `
+    <label>
+    Name
+    <input name="name" required />
+    </label>
+    <label>
+    Description
+    <textarea name="description" rows="5" cols="40">
+    Enter the description...
+    </textarea>
+    </label>
+    <label>
+    Date
+    <input type="date" name="date" required />
+    </label>
+    <label>
+    Location
+    <input name="location" required />
+    </label>
+    <button>Create Party</button>
+  `;
+  // todo: add event listener
+  const nameInput = $form.querySelector('input[name="name"]');
+  nameInput.addEventListener("change", function (e) {
+    formState.name = e.target.value;
+  });
+  const descriptionInput = $form.querySelector('textarea[name="description"]');
+  descriptionInput.addEventListener("change", function (e) {
+    formState.description = e.target.value;
+  });
+  const dateInput = $form.querySelector('input[name="date"]');
+  dateInput.addEventListener("change", function (e) {
+    formState.date = new Date(e.target.value).toISOString();
+  });
+  const locationInput = $form.querySelector('input[name="location"]');
+  locationInput.addEventListener("change", function (e) {
+    formState.location = e.target.value;
+  });
+  $form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    try {
+      await addParty(formState);
+    } catch (error) {
+      console.error(error);
+    }
+  });
+  return $form;
+}
+
 // === Render ===
 function render() {
   const $app = document.querySelector("#app");
@@ -137,6 +219,8 @@ function render() {
       <section>
         <h2>Upcoming Parties</h2>
         <PartyList></PartyList>
+        <h3>Create a new party</h3>
+        <NewPartyForm></NewPartyForm>
       </section>
       <section id="selected">
         <h2>Party Details</h2>
@@ -146,6 +230,7 @@ function render() {
   `;
 
   $app.querySelector("PartyList").replaceWith(PartyList());
+  $app.querySelector("NewPartyForm").replaceWith(NewPartyForm());
   $app.querySelector("SelectedParty").replaceWith(SelectedParty());
 }
 
